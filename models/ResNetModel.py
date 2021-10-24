@@ -26,7 +26,7 @@ class ResNetModel(NNModel):
                 f2 = Dense(width, activation=activation, name='f2_'+str(i+1))(f2) + f1
                 if i % 2 == 0:
                     f2 = BatchNormalization()(f2)
-                    f2 = Dropout(.05)(f2)
+                    f2 = Dropout(.1)(f2)
                 f1 = f2
             f2 = Dense(width, activation=activation, name='f2_out')(f2)
             y = Dense(self.y_train.shape[1])(f2)

@@ -28,19 +28,19 @@ class NNModel(MLModel):
 
     
     def inner_train(self, learning_rate:float, batch_size:float, alpha:float, temperature:float, rho:float) -> float:
-        weights = {'target_'+str(i): tf.keras.backend.variable(1.) for i in range(self.y_train.shape[1])}
-        weights.update({'det': tf.keras.backend.variable(1.), 'nonneg': tf.keras.backend.variable(1.)})
-        losses = {'target_'+str(i): 'mse' for i in range(self.y_train.shape[1])}
-        losses.update({'det': det_loss, 'nonneg': nonneg_loss})
+        weights = {'out_'+str(i): tf.keras.backend.variable(1.) for i in range(self.y_train.shape[1])}
+        #weights.update({'nonneg': tf.keras.backend.variable(1.)})
+        losses = {'out_'+str(i): 'mse' for i in range(self.y_train.shape[1])}
+        #losses.update({'nonneg': nonneg_loss})
         def build_model(learning_rate:float) -> tf.keras.Model:
             x = Input((self.X_train.shape[1],))
             y = self.model[0](x)
 
-            targets = [Lambda(lambda x: x, name='target_'+str(i))(y[:, i]) for i in range(self.y_train.shape[1])]
-            det = Lambda(lambda x: x, name='det')(y[:, -9:])
-            nonneg = Lambda(lambda x: tf.reduce_sum(x[0]*x[1]), name='nonneg')([x[:, -9:], y[:, -9:]])
+            targets = [Lambda(lambda x: x, name='out_'+str(i))(y[:, i]) for i in range(self.y_train.shape[1])]
+            #det = Lambda(lambda x: x, name='det')(y[:, -9:])
+            #nonneg = Lambda(lambda x: tf.reduce_sum(x[0]*x[1]), name='nonneg')([x[:, -3:], y[:, :3]])
 
-            model = tf.keras.Model(x, targets+[det, nonneg])
+            model = tf.keras.Model(x, targets)
             model.compile(
                 loss=losses, 
                 loss_weights=weights,
@@ -48,20 +48,20 @@ class NNModel(MLModel):
             return model
 
         callbacks = [
-            tf.keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True, verbose=1),
-            tf.keras.callbacks.ReduceLROnPlateau(patience=5, min_lr=learning_rate*1e-3, verbose=1),
-            #WarmUpLearningRateScheduler(3*self.X_train.shape[0]//batch_size, 1e-3, verbose=0),
-            ReLoBRaLo(weights, alpha=1-(10**alpha), temperature=10**temperature, rho=1-(10**rho))
+            ReLoBRaLo(weights, alpha=1-(10**alpha), temperature=10**temperature, rho=1-(10**rho)),
+            tf.keras.callbacks.EarlyStopping(patience=12, restore_best_weights=True, verbose=1),
+            tf.keras.callbacks.ReduceLROnPlateau(patience=5, min_lr=learning_rate*1e-4, verbose=1),
+            #WarmUpLearningRateScheduler(self.X_train.shape[0]//batch_size, learning_rate, verbose=0),
         ]
 
         model = build_model(learning_rate)
 
         model.fit(
-            self.X_train, self.y_train, 
+            self.X_train, [self.y_train[:, i] for i in range(self.y_train.shape[1])],#+[np.zeros_like(self.y_train[:, 0])], 
             batch_size=int(batch_size), 
-            epochs=10000, 
+            epochs=1000, 
             callbacks=callbacks,
-            validation_data=(self.X_val, self.y_val),
+            validation_data=(self.X_val, [self.y_val[:, i] for i in range(self.y_val.shape[1])]),#+[np.zeros_like(self.y_val[:, 0])]),
             shuffle=True,
             verbose=True
         )

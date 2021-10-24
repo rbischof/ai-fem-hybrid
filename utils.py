@@ -42,21 +42,23 @@ def show_diagonal_match(save_path:str, X:np.array, Y:np.array, predictions:np.ar
     # calculate mse
     r_squared2 = np.corrcoef(Y.flatten(), predictions.flatten())[0, 1]**2
 
-    fig = plt.figure(constrained_layout=True, figsize=[12,12])
-    # plotindex = np.concatenate([np.array([0,2,3]),np.arange(8,11,1)])
+    plt.figure(figsize=[12, 10], dpi=100)
     plt.plot(Y, predictions, marker = 'o', ms = 10, linestyle='None')
     #plt.title(plotname)
     axa = plt.gca()
-    axa.set_aspect('equal', 'box')    
+    axa.set_aspect('equal', 'box')
+    axa.axis('square')
     axa.set_ylabel('Predicted '+ plotname)
-    axa.set_xlabel('True '+ plotname)
+    axa.set_xlabel('Reference '+ plotname)
+    axa.set_xlim([np.min([np.min(Y), np.min(predictions)]), np.max([np.max(Y), np.max(predictions)])])
+    axa.set_ylim([np.min([np.min(Y), np.min(predictions)]), np.max([np.max(Y), np.max(predictions)])])
     axa.grid(True, which='major', color='#666666', linestyle='-')
     at = AnchoredText('$R^2$ = ' + np.array2string(r_squared2, precision=3) +
                 '\n$V_r$ = '+ np.array2string(Vr, precision=3),
                 prop=dict(size=25), frameon=True,loc='upper left')
     at.patch.set_boxstyle('round,pad=0.,rounding_size=0.2')
     axa.add_artist(at)   
-    plt.plot([np.min(Y), np.max(Y)], [np.min(Y), np.max(Y)], color='darkorange', linestyle='--',
+    plt.plot([np.min([np.min(Y), np.min(predictions)]), np.max([np.max(Y), np.max(predictions)])], [np.min([np.min(Y), np.min(predictions)]), np.max([np.max(Y), np.max(predictions)])], color='darkorange', linestyle='--',
                 linewidth = 7)
     plt.tight_layout()
     if save_path is not None:
@@ -80,20 +82,20 @@ def create_directory(path:str):
     return path
 
 
-def append_to_results(name:str, parameters, val_error:float):
+def append_to_results(path:str, name:str, parameters, val_error:float):
     if not os.path.exists('experiments'):
         os.makedirs('experiments')
     
     if tf.is_tensor(val_error):
         val_error = val_error.numpy()
 
-    output = [strftime('%d.%m. %H:%M:%S', gmtime(time())), name, val_error, parameters]
+    output = [strftime('%d.%m. %H:%M:%S', gmtime(time())), path, name, val_error, parameters]
 
     try:
         if not os.path.exists('experiments'):
             with open('experiments/results.csv', 'a+', newline='') as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(['timestamp', 'model_name', 'val_error', 'parameters'])
+                writer.writerow(['timestamp', 'path', 'model_name', 'val_error', 'parameters'])
         with open('experiments/results.csv', 'a+', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(output)
@@ -154,17 +156,18 @@ class ReLoBRaLo(tf.keras.callbacks.Callback):
 
     def on_train_batch_end(self, batch:int, logs:dict={}):
         # reset all weights to 1 for validation
-        for _, w in self.weighting:
+        for w in self.weighting.values():
             tf.keras.backend.set_value(w, 1.)
         self.batch_count += 1
 
         # prepare lambdas for next batch
         # find losses in logs or raise error
         losses = []
-        for k, _ in self.weighting:
+        for k in self.weighting.keys():
             loss = logs.get(k+'_loss')
             if loss is None:
-                print(k, 'not in logs:', logs)
+                pass
+                # print(k, 'not in logs:', logs)
             else:
                 losses.append(loss)
 
@@ -191,10 +194,11 @@ class ReLoBRaLo(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch:int, logs:dict={}):
         # add lambdas to log
         logs['lambdas'] = [l.numpy() for l in self.lambdas]
+        print('lambdas', logs['lambdas'])
 
 
 def det_loss(y, pred):
-    return tf.reduce_mean((tf.linalg.det(tf.reshape(y[:, -9:], (-1, 3, 3))) - tf.linalg.det(tf.reshape(pred[:, -9:], (-1, 3, 3))))**2)
+    return tf.reduce_mean((tf.linalg.det(tf.reshape(y[:, -9:], (-1, 3, 3))+1e-3) - tf.linalg.det(tf.reshape(pred[:, -9:], (-1, 3, 3))*1e-3))**2)
 
 def nonneg_loss(y, pred):
     return tf.nn.relu(-pred)

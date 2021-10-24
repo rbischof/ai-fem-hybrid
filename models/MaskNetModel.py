@@ -16,7 +16,7 @@ class MaskNetModel(NNModel):
             for i in range(depth):
                 if i % 2 == 0:
                     f2 = BatchNormalization()(f2 + f1)
-                    f2 = Dropout(.05)(f2)
+                    f2 = Dropout(.1)(f2)
                     f20 = Dense(width, activation=activation, name='f20_'+str(i+1))(f2)
                     f21 = Dense(self.X_train.shape[1], name='f21_'+str(i+1))(f2) * x
                     f22 = Dense(self.X_train.shape[1], name='f22_'+str(i+1))(f2) * (1 - x)
@@ -32,6 +32,6 @@ class MaskNetModel(NNModel):
             model.summary()
             return model
 
-        self.model = [model(int(depth), int(width), ['relu', 'tanh', 'sigmoid'][min(int(activation), 2)])]
+        self.model = [model(int(depth), int(width), ['relu', 'tanh', tf.nn.leaky_relu][min(int(activation), 2)])]
         
         return super().inner_train(learning_rate, batch_size, alpha, temperature, rho)

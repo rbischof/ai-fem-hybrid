@@ -25,6 +25,7 @@ class XGBoostModel(MLModel):
                 bayesian_optimization:bool, params:dict=None) -> float:
 
         self.model = []
+        self.parameters = []
 
         if len(y_train.shape) == 1:
             y_val = y_val.reshape((-1, 1))
@@ -41,9 +42,9 @@ class XGBoostModel(MLModel):
                 BO = BayesianOptimization(self.inner_train, self.parameter_ranges)
                 BO.maximize(n_iter=30, init_points=10, acq='ei')
                 self.inner_train(**BO.max['params'])
-                self.parameters = BO.max['params']
+                self.parameters.append(BO.max['params'])
             else:
-                self.inner_train(**params)
+                self.inner_train(**params[i])
                 self.parameters = params
 
 

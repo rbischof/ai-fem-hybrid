@@ -121,7 +121,7 @@ class MLModel():
         assert X_test.shape[-1] == len(in_var_names)
 
         explainer = shap.Explainer(self.predict, X_test[:100])
-        shap_values = explainer(X_test[100:]).values.mean(axis=0)
+        shap_values = explainer(X_test[:100]).values.mean(axis=0)
         
         if path is not None:
             figures_path = os.path.join(path, 'figures')
@@ -146,15 +146,13 @@ class MLModel():
         Generates diagonal matching figures and stores them in path.
         Plots feature importances.
         """
-        print('saving model in', path)
-        self.save_model(path)
 
         print('evaluating on test set')
         predictions = self.predict(X_test)
         test_error  = np.mean((predictions - y_test)**2)
 
         print('appending to scoreboard')
-        append_to_results(self.name, self.parameters, test_error)
+        append_to_results(path, self.name, self.parameters, test_error)
 
         if in_var_names is None:
             in_var_names = IN_VAR_NAMES[1:]

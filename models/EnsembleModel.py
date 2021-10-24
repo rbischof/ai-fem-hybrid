@@ -7,6 +7,8 @@ from models.MLModel import MLModel
 from models.KNNModel import KNNModel
 from models.SVMModel import SVMModel
 from models.FCNNModel import FCNNModel
+from models.ResNetModel import ResNetModel
+from models.MaskNetModel import MaskNetModel
 from models.LGBMModel import LGBMModel
 from models.XGBoostModel import XGBoostModel
 
@@ -63,10 +65,10 @@ class EnsembleModel(MLModel):
         ensembler_path = os.path.join(path, 'ensembler')
         self.ensembler.save_model(os.path.join(ensembler_path, 'model'))
 
-        base_models_path = os.path.join(ensembler_path, 'base_models')
+        base_models_path = os.path.join(path, 'base_models')
 
-        for m in self.base_models:
-            base_model_path = os.path.join(base_models_path, m.name)
+        for i, m in enumerate(self.base_models):
+            base_model_path = os.path.join(base_models_path, str(i), m.__class__.__name__)
             m.save_model(base_model_path)
 
 
@@ -74,21 +76,33 @@ class EnsembleModel(MLModel):
         ensembler_path = os.path.join(path, 'ensembler')
         self.ensembler.load_model(os.path.join(ensembler_path, 'model'))
 
-        base_models_path  = os.path.join(ensembler_path, 'base_models')
-        base_models_paths = list(pathlib.Path(base_models_path))
+        base_models_path  = os.path.join(path, 'base_models')
+        base_models_paths = list(pathlib.Path(base_models_path).glob('*'))
         self.base_models = []
         for p in base_models_paths:
+            base_model_path = list(pathlib.Path(p).glob('*'))[0]
             base_model = {
-                'FCNNModel': FCNNModel(self.X_train, self.y_train),
-                'LGBMModel': LGBMModel(self.X_train, self.y_train),
-                'XGBoostModel': XGBoostModel(self.X_train, self.y_train),
-                'KNNModel': KNNModel(self.X_train, self.y_train),
-                'SVMModel': SVMModel(self.X_train, self.y_train)
-            }[p.split('/')[-1]]
-            self.base_models.append(base_model.load_model(p))
+                'FCNNModel': FCNNModel,
+                'ResNetModel': ResNetModel,
+                'MaskNetModel': MaskNetModel,
+                'LGBMModel': LGBMModel,
+                'XGBoostModel': XGBoostModel,
+                'KNNModel': KNNModel,
+                'SVMModel': SVMModel
+            }[str(base_model_path).split('/')[-1]]
+            bm = base_model()
+            bm.load_model(base_model_path)
+            self.base_models.append(bm)
 
-    
-    def evaluate(self, path: str, X_test: np.array, y_test: np.array) -> None:
-        preds_test = np.array([m.predict(X_test) for m in self.base_models]).T.reshape(len(X_test), -1)
-        X_test = np.hstack([X_test, preds_test])
-        self.ensembler.evaluate(path, X_test, y_test)
+
+    def evaluate(self, path: str, X_test: np.array, y_test: np.array, in_var_names: list, out_var_names: list) -> None:
+        X_hat = X_test
+        for m in self.base_models:
+            print('creating predictions with base model', m.name)
+            X_hat = np.hstack([X_hat, m.predict(X_test)])
+
+        extended_in_var_names = in_var_names.copy()
+        for bm in self.base_models:
+            extended_in_var_names += [bm.name+'_'+ovn for ovn in out_var_names]
+        print('predicting with ensembler')
+        self.ensembler.evaluate(path, X_hat, y_test, in_var_names=extended_in_var_names, out_var_names=out_var_names)
