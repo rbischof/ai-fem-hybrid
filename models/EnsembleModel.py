@@ -54,11 +54,12 @@ class EnsembleModel(MLModel):
         Proxy for creating predictions. in case the model consists of various submodels,
         it collects all predictions and concatenates them into a single array.
         """
-
-        preds_base = np.array([m.predict(X) for m in self.base_models]).T.reshape(len(X), -1)
-        X = np.hstack([X, preds_base])
+        X_hat = X
+        for m in self.base_models:
+            print('creating predictions of base model', m.name)
+            X_hat = np.hstack([X_hat, m.predict(X)])
         
-        return self.ensembler.predict(X)
+        return self.ensembler.predict(X_hat)
 
 
     def save_model(self, path:str) -> None:
