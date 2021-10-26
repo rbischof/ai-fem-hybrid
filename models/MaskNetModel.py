@@ -15,12 +15,12 @@ class MaskNetModel(NNModel):
             f1 = f2
             for i in range(depth):
                 if i % 2 == 0:
-                    f2 = BatchNormalization()(f2 + f1)
-                    f2 = Dropout(.1)(f2)
-                    f20 = Dense(width, activation=activation, name='f20_'+str(i+1))(f2)
+                    f20 = Dense(width, activation=activation, name='f20_'+str(i+1))(f2+f1)
                     f21 = Dense(self.X_train.shape[1], name='f21_'+str(i+1))(f2) * x
                     f22 = Dense(self.X_train.shape[1], name='f22_'+str(i+1))(f2) * (1 - x)
                     f2 = Concatenate()([f20, f21, f22])
+                    f2 = BatchNormalization()(f2)
+                    f2 = Dropout(.1)(f2)
                 
                 f2 = Dense(width, activation=activation, name='f2_'+str(i+1))(f2)
                 f1 = f2

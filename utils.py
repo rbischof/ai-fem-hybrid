@@ -158,7 +158,6 @@ class ReLoBRaLo(tf.keras.callbacks.Callback):
         # reset all weights to 1 for validation
         for w in self.weighting.values():
             tf.keras.backend.set_value(w, 1.)
-        self.batch_count += 1
 
         # prepare lambdas for next batch
         # find losses in logs or raise error
@@ -174,14 +173,16 @@ class ReLoBRaLo(tf.keras.callbacks.Callback):
         # in first iteration, drop lambda_hat and use init lambdas, i.e. lambda = 1
         if self.batch_count == 0:
             alpha = 1.
+            rho = 1.
         # in second iteration, drop init lambdas and use only lambda_hat
         elif self.batch_count == 1:
             alpha = 0.
+            rho = 1.
         # in following iterations, default behaviour
         else:
             alpha = self.alpha
+            rho = (np.random.uniform(size=1) < self.rho).astype(int).astype(np.float32)[0]
 
-        rho = (np.random.uniform(size=1) < self.rho).astype(int).astype(np.float32)[0]
         lambdas_hat = tf.stop_gradient(tf.nn.softmax([losses[i]/(self.losses[i]*self.temperature+1e-7) for i in range(len(losses))])*tf.cast(len(losses), dtype=tf.float32))
         init_lambdas_hat = tf.stop_gradient(tf.nn.softmax([losses[i]/(self.init_loss[i]*self.temperature+1e-7) for i in range(len(losses))])*tf.cast(len(losses), dtype=tf.float32))
         self.lambdas = [rho*alpha*self.lambdas[i] + (1-rho)*alpha*init_lambdas_hat[i] + (1-alpha)*lambdas_hat[i] for i in range(len(losses))]
@@ -190,6 +191,7 @@ class ReLoBRaLo(tf.keras.callbacks.Callback):
         if self.batch_count == 0:
             self.init_loss = losses
         self.losses = losses
+        self.batch_count += 1
 
     def on_epoch_end(self, epoch:int, logs:dict={}):
         # add lambdas to log

@@ -12,7 +12,7 @@ class FCNNModel(NNModel):
             x = Input((self.X_train.shape[1],))
             f = Dense(width, activation=activation, name='f0')(x)
 
-            for i in range(min(0, depth-2)):
+            for i in range(max(0, depth-2)):
                 f = Dense(width, activation=activation, name='f'+str(i+1))(f)
                 if i % 2 == 0:
                     f = BatchNormalization()(f)

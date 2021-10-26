@@ -17,7 +17,7 @@ class LGBMModel(MLModel):
             'min_child_weight': (0, 10),
             'n_estimators': (30, 300),
             'num_leaves': (10, 100),
-            'min_data_in_leaf': (10, 30)
+            'min_child_samples': (10, 30)
         }
 
 
@@ -49,16 +49,17 @@ class LGBMModel(MLModel):
                 self.parameters = params
 
 
-    def inner_train(self, learning_rate, max_depth, min_child_weight, n_estimators, num_leaves, min_data_in_leaf) -> float:          
+    def inner_train(self, learning_rate, max_depth, min_child_weight, n_estimators, num_leaves, min_child_samples) -> float:          
         model = lgbm.LGBMRegressor(
             learning_rate=learning_rate, 
             max_depth=int(max_depth), 
             min_child_weight=min_child_weight, 
             n_estimators=int(n_estimators),
             num_leaves=int(num_leaves),
-            min_data_in_leaf=int(min_data_in_leaf),
-            bagging_fraction=.5,
-            bagging_freq=3,
+            min_child_samples=int(min_child_samples),
+            subsample=.5,
+            subsample_freq=3,
+            force_row_wise=True,
             seed=42,
             verbosity=0
         )
