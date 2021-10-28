@@ -83,7 +83,10 @@ class LGBMModel(MLModel):
         if not os.path.exists(models_path):
             os.makedirs(models_path)
         for i, m in enumerate(self.model):
-            m.booster_.save_model(os.path.join(models_path, 'model_'+str(i)+'.txt'))
+            if isinstance(m, lgbm.LGBMRegressor):
+                m.booster_.save_model(os.path.join(models_path, 'model_'+str(i)+'.txt'))
+            else:
+                m.save_model(os.path.join(models_path, 'model_'+str(i)+'.txt'))
         super().save_model(models_path)
 
 
@@ -102,7 +105,10 @@ class LGBMModel(MLModel):
                 os.makedirs(figures_path)
 
         for i, ov in enumerate(out_var_names):
-            fi = self.model[i].feature_importances_
+            if isinstance(self.model[i], lgbm.LGBMRegressor):
+                fi = self.model[i].feature_importances_
+            else:
+                fi = self.model[i].feature_importance()
             plt.figure(figsize=(8, 36)) 
             plt.barh(np.arange(len(fi)), fi)
             plt.yticks(np.arange(len(fi)), in_var_names)

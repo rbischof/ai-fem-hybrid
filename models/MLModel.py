@@ -129,6 +129,7 @@ class MLModel():
                 os.makedirs(figures_path)
             
         for i, ov in enumerate(out_var_names):
+            plt.figure(figsize=(8, 6)) 
             plt.barh(np.arange(len(shap_values[:, i])), shap_values[:, i])
             plt.yticks(np.arange(len(shap_values[:, i])), in_var_names)
             plt.title(ov)
@@ -137,6 +138,7 @@ class MLModel():
             if path is not None:
                 plt.savefig(os.path.join(figures_path, 'feature_importance_'+ov), bbox_inches='tight', dpi=400)
             plt.show()
+            plt.close()
     
 
     def evaluate(self, path:str, X_test:np.array, y_test:np.array, in_var_names:list=None, out_var_names:list=None) -> None:

@@ -45,7 +45,7 @@ class EnsembleModel(MLModel):
             X_train_hat = np.hstack([X_train_hat, m.predict(self.X_train)])
             X_val_hat   = np.hstack([X_val_hat, m.predict(self.X_val)])
         
-        print('start training of ensembler on data with shape', X_train.shape)
+        print('start training of ensembler on data with shape', X_train_hat.shape)
         self.ensembler.train(X_train_hat, y_train, X_val_hat, y_val, bayesian_optimization, params)
 
 

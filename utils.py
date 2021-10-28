@@ -64,6 +64,7 @@ def show_diagonal_match(save_path:str, X:np.array, Y:np.array, predictions:np.ar
     if save_path is not None:
         plt.savefig(os.path.join(save_path, 'diagonal_match_'+plotname), dpi=400, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 def create_directory(path:str):
