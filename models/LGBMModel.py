@@ -25,9 +25,6 @@ class LGBMModel(MLModel):
                 X_val:np.array, y_val:np.array,
                 bayesian_optimization:bool, params:list=None) -> float:
 
-        self.model = []
-        self.parameters = []
-
         if len(y_train.shape) == 1:
             y_val = y_val.reshape((-1, 1))
 
@@ -64,9 +61,7 @@ class LGBMModel(MLModel):
             verbosity=0
         )
 
-        if len(self.model) > self.i:
-            self.model[self.i] = model
-        else:
+        if len(self.model) <= self.i:
             self.model.append(model)
 
         self.model[self.i].fit(self.X_train, self.y_train[:, self.i],
@@ -86,7 +81,7 @@ class LGBMModel(MLModel):
             if isinstance(m, lgbm.LGBMRegressor):
                 m.booster_.save_model(os.path.join(models_path, 'model_'+str(i)+'.txt'))
             else:
-                m.save_model(os.path.join(models_path, 'model_'+str(i)+'.txt'))
+                m.save_model(os.path.join(models_path, 'model_'+str(i)+'.txt'), num_iteration=m.best_iteration)
         super().save_model(models_path)
 
 
@@ -104,12 +99,14 @@ class LGBMModel(MLModel):
             if not os.path.exists(figures_path):
                 os.makedirs(figures_path)
 
+        f_importances = []
         for i, ov in enumerate(out_var_names):
             if isinstance(self.model[i], lgbm.LGBMRegressor):
                 fi = self.model[i].feature_importances_
             else:
                 fi = self.model[i].feature_importance()
-            plt.figure(figsize=(8, 36)) 
+            f_importances.append(np.array(fi).reshape(-1, 1))
+            plt.figure(figsize=(8, 10)) 
             plt.barh(np.arange(len(fi)), fi)
             plt.yticks(np.arange(len(fi)), in_var_names)
             plt.title(ov)
@@ -118,3 +115,15 @@ class LGBMModel(MLModel):
             if path is not None:
                 plt.savefig(os.path.join(figures_path, 'feature_importance_'+ov), bbox_inches='tight', dpi=400)
             plt.show()
+
+        plt.figure(figsize=(8, 36)) 
+        plt.barh(np.arange(len(f_importances)), np.array(f_importances).mean(axis=-1))
+        plt.yticks(np.arange(len(f_importances)), in_var_names)
+        plt.title('Mean Feature Importances')
+        plt.xlabel('Importance')
+        plt.grid(True, which='major', color='#666666', linestyle='-')
+        if path is not None:
+            plt.savefig(os.path.join(figures_path, 'feature_importance_mean'), bbox_inches='tight', dpi=400)
+        plt.show()
+
+        

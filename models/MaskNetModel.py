@@ -32,6 +32,7 @@ class MaskNetModel(NNModel):
             model.summary()
             return model
 
-        self.model = [model(int(depth), int(width), ['relu', 'tanh', tf.nn.leaky_relu][min(int(activation), 2)])]
+        if len(self.model) == 0:
+            self.model = [model(int(depth), int(width), ['relu', 'tanh', tf.nn.leaky_relu][min(int(activation), 2)])]
         
         return super().inner_train(learning_rate, batch_size, alpha, temperature, rho)

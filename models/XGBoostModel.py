@@ -24,9 +24,6 @@ class XGBoostModel(MLModel):
                 X_val:np.array, y_val:np.array,
                 bayesian_optimization:bool, params:dict=None) -> float:
 
-        self.model = []
-        self.parameters = []
-
         if len(y_train.shape) == 1:
             y_val = y_val.reshape((-1, 1))
 
@@ -63,9 +60,7 @@ class XGBoostModel(MLModel):
             verbosity=1
         )
 
-        if len(self.model) > self.i:
-            self.model[self.i] = model
-        else:
+        if len(self.model) <= self.i:
             self.model.append(model)
 
         self.model[self.i].fit(self.X_train, self.y_train[:, self.i], 
@@ -107,8 +102,10 @@ class XGBoostModel(MLModel):
             if not os.path.exists(figures_path):
                 os.makedirs(figures_path)
 
+        f_importances = []
         for i, ov in enumerate(out_var_names):
             fi = self.model[i].get_score(importance_type='gain').values()
+            f_importances.append(np.array(fi).reshape(-1, 1))
             plt.barh(np.arange(len(fi)), fi)
             plt.yticks(np.arange(len(fi)), in_var_names)
             plt.title(ov)
@@ -117,3 +114,13 @@ class XGBoostModel(MLModel):
             if path is not None:
                 plt.savefig(os.path.join(figures_path, 'feature_importance_'+ov), bbox_inches='tight', dpi=400)
             plt.show()
+
+        plt.figure(figsize=(8, 36)) 
+        plt.barh(np.arange(len(f_importances)), np.array(f_importances).mean(axis=-1))
+        plt.yticks(np.arange(len(f_importances)), in_var_names)
+        plt.title('Mean Feature Importances')
+        plt.xlabel('Importance')
+        plt.grid(True, which='major', color='#666666', linestyle='-')
+        if path is not None:
+            plt.savefig(os.path.join(figures_path, 'feature_importance_mean'), bbox_inches='tight', dpi=400)
+        plt.show()

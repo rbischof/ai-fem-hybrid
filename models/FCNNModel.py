@@ -25,6 +25,7 @@ class FCNNModel(NNModel):
             model.summary()
             return model
 
-        self.model = [build_model(int(depth), int(width), ['relu', 'tanh', 'sigmoid'][min(int(activation), 2)])]
+        if len(self.model) == 0:
+            self.model = [build_model(int(depth), int(width), ['relu', 'tanh', 'sigmoid'][min(int(activation), 2)])]
         
         return super().inner_train(learning_rate, batch_size, alpha, temperature, rho)

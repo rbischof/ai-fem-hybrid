@@ -15,14 +15,15 @@ class KNNModel(MLModel):
 
 
     def inner_train(self, n_neighbors, p) -> float:
-        self.model.append(
-            KNeighborsRegressor(
-                n_neighbors=int(n_neighbors), 
-                p=int(p),
-                weights='distance',
-                n_jobs=-1
+        if len(self.model) == 0:
+            self.model.append(
+                KNeighborsRegressor(
+                    n_neighbors=int(n_neighbors), 
+                    p=int(p),
+                    weights='distance',
+                    n_jobs=-1
+                )
             )
-        )
 
         self.model[0].fit(self.X_train, self.y_train)
         return -np.mean((self.predict(self.X_val) - self.y_val)**2)

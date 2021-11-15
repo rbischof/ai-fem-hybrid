@@ -31,8 +31,6 @@ class EnsembleModel(MLModel):
                 X_val:np.array, y_val:np.array,
                 bayesian_optimization:bool, params:dict=None) -> None:
 
-        self.model = []
-
         self.X_train = X_train
         self.y_train = y_train
         self.X_val = X_val

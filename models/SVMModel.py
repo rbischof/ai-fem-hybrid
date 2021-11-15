@@ -15,14 +15,15 @@ class SVMModel(MLModel):
         }
 
     def inner_train(self, C, tol, loss) -> float:
-        self.model.append(
-            LinearSVR(
-                C=C, 
-                tol=tol,
-                loss=['epsilon_insensitive', 'squared_epsilon_insensitive'][int(loss)],
-                verbose=False
+        if len(self.model) == 0:
+            self.model.append(
+                LinearSVR(
+                    C=C, 
+                    tol=tol,
+                    loss=['epsilon_insensitive', 'squared_epsilon_insensitive'][int(loss)],
+                    verbose=False
+                )
             )
-        )
 
         self.model[0].fit(self.X_train, self.y_train)
         return -np.mean((self.predict(self.X_val) - self.y_val)**2)

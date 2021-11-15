@@ -7,7 +7,8 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 from bayes_opt import BayesianOptimization
-from utils import append_to_results, show_diagonal_match, IN_VAR_NAMES, OUT_VAR_NAMES
+from utils import append_to_results, IN_VAR_NAMES, OUT_VAR_NAMES
+from statistics import accuracy_diagonal_plot, mean_correction_factor_plot, qq_plot, ratio_plot
 
 
 class MLModel():
@@ -58,7 +59,6 @@ class MLModel():
             if bayesian optimization is False, this argument must contain the values of
             the required hyperparameters that the model should be trained with.
         """
-        self.model = []
 
         self.X_train = X_train
         self.y_train = y_train
@@ -72,7 +72,9 @@ class MLModel():
             self.parameters = [BO.max['params']]
         else:
             assert params is not None
-            self.inner_train(**params)
+            if isinstance(params, dict):
+                params = [params]
+            self.inner_train(**(params[0]))
             self.parameters = [params]
 
 
@@ -116,6 +118,12 @@ class MLModel():
             with open(p, 'rb') as f:
                 self.parameters.append(pickle.load(f))
 
+    def reset_model(self) -> None:
+        """
+        Resets the model to blank
+        """
+        self.model = []
+        self.parameters = []
 
     def feature_importance(self, path: str, X_test: np.array, in_var_names:list, out_var_names:list) -> None:
         assert X_test.shape[-1] == len(in_var_names)
@@ -127,9 +135,20 @@ class MLModel():
             figures_path = os.path.join(path, 'figures')
             if not os.path.exists(figures_path):
                 os.makedirs(figures_path)
+
+        plt.figure(figsize=(8, 6)) 
+        plt.barh(np.arange(len(shap_values)), np.mean(shap_values, axis=-1))
+        plt.yticks(np.arange(len(shap_values)), in_var_names)
+        plt.title('Mean Shapley Values')
+        plt.xlabel('Shapley values')
+        plt.grid(True, which='major', color='#666666', linestyle='-')
+        if path is not None:
+            plt.savefig(os.path.join(figures_path, 'feature_importance_mean'), bbox_inches='tight', dpi=400)
+        plt.show()
+        plt.close()
             
         for i, ov in enumerate(out_var_names):
-            plt.figure(figsize=(8, 6)) 
+            plt.figure(figsize=(8, 8)) 
             plt.barh(np.arange(len(shap_values[:, i])), shap_values[:, i])
             plt.yticks(np.arange(len(shap_values[:, i])), in_var_names)
             plt.title(ov)
@@ -170,7 +189,11 @@ class MLModel():
 
         print('generating diagonal plots')
         for i, var in enumerate(out_var_names):
-            show_diagonal_match(figures_path, X_test, y_test[:, i:i+1], predictions[:, i:i+1], var)
+            accuracy_diagonal_plot(figures_path, X_test, y_test[:, i:i+1], predictions[:, i:i+1], var)
+
+        mean_correction_factor_plot(y_test, predictions, figures_path, out_var_names)
+        qq_plot(y_test, predictions, figures_path, out_var_names)
+        ratio_plot(y_test, predictions, figures_path, out_var_names)
 
         print('gathering feature importances')
         self.feature_importance(path, X_test[:100], in_var_names, out_var_names)
